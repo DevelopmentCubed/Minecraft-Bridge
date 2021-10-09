@@ -5,11 +5,7 @@ You can also manage the servers whitelist via the bot with `!whitelist add/remov
 
 # Installation
 
-1.
-
-```
-git clone https://github.com/DevelopmentCubed/Minecraft-Bridge.git
-```
+1. `git clone https://github.com/DevelopmentCubed/Minecraft-Bridge.git`
 
 2. `yarn install` or `npm install`
 
