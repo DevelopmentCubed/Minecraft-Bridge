@@ -99,9 +99,9 @@ class Bridge {
 		}
 
 		if (data.match(joined)?.length) {
-			const [username] = data.match(/.{3,16}\[\//);
+			const [username] = data.match(/ .{3,16}\[\//);
 			return this.bot.createMessage(process.env.DISCORD_CHANNEL, {
-				content: `${username.replace(/\[\//g, '')} joined the game`,
+				content: `${username.replace(/\[\//g, '').trim()} joined the game`,
 				allowedMentions: {
 					users: false,
 					roles: false,
@@ -111,7 +111,7 @@ class Bridge {
 		}
 
 		if (data.match(left)?.length) {
-			const [username] = data.match(/.{3,16} lost/);
+			const [username] = data.match(/ .{3,16} lost/);
 			return this.bot.createMessage(process.env.DISCORD_CHANNEL, {
 				content: `${username.replace(' lost', '')} left the game`,
 				allowedMentions: {
