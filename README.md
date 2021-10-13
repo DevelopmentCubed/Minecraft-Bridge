@@ -1,6 +1,7 @@
 # Minecraft Bridge
 
-Connects your Minecraft server to a Discord channel.
+Connects your Minecraft server to a Discord channel via RCON.
+
 You can also manage the servers whitelist via the bot with `!whitelist add/remove/list`
 
 # Server Compatibility 
@@ -9,7 +10,7 @@ Works with [Vanilla](https://www.minecraft.net/en-us/download/server), [Spigot](
 
 # Installation
 
-1. Install the latest LTS version of [NodeJS](https://nodejs.org/)
+1. Install the latest LTS version of [Node](https://nodejs.org/)
 
 2. `git clone https://github.com/DevelopmentCubed/Minecraft-Bridge.git`
 
