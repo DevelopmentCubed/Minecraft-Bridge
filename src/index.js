@@ -10,10 +10,24 @@ class Bridge {
 		this.bot = new Client(process.env.TOKEN);
 		this.tail = new Tail(process.env.LOG_PATH);
 		this.rcon = new Rcon({ host: 'localhost', port: process.env.RCON_PORT, password: process.env.RCON_PASSWORD });
+		this.rcon.on('connect', () => console.log(`[RCON] Connecting to port ${process.env.RCON_PORT}`));
+
+		this.rcon.on('authenticated', () => console.log(`[RCON] Connected to port ${process.env.RCON_PORT}`));
+
+		this.rcon.on('end', () => {
+			console.log('[RCON] Connection lost, attempting to reconnect in 5 seconds...');
+			setTimeout(() => {
+				this.rcon.connect();
+			}, 5000);
+		});
+
+		this.rcon.on('error', (error) => console.log(`[RCON] An error has occurred: ${error}`));
 
 		this.tail.on('line', (data) => this.sendToDiscord(data));
 
-		this.bot.on('ready', () => console.log(`${this.bot.user.username} ready in ${this.bot.guilds.size} guilds`));
+		this.tail.on('error', (error) => console.log(`[TAIL] An error has occurred: ${error}`));
+
+		this.bot.on('ready', () => console.log(`\n[DISCORD] ${this.bot.user.username} ready in ${this.bot.guilds.size} guilds\n`));
 
 		this.bot.on('messageCreate', async (event) => {
 			if (!event.author || event.author.bot || !event.content.length || event.channel.id !== process.env.DISCORD_CHANNEL) return;
@@ -53,22 +67,60 @@ class Bridge {
 	}
 
 	sendToDiscord(data) {
-		const message = /.*\[net.minecraft\.server\.dedicated\.DedicatedServer\/\]: <.{3,16}> /;
-		const joined = /.*\[net.minecraft\.server\.dedicated\.DedicatedServer\/\]: .{3,16} joined/;
-		const left = /.*\[net.minecraft\.server\.dedicated\.DedicatedServer\/\]: .{3,16} left/;
+		const stopping = /INFO\].*: Stopping the server/g;
+		const started = /INFO\].*: Done \(.*\)! For help, type "help"/g;
 
-		if (!joined.test(data) && !left.test(data) && !message.test(data)) return;
-    
-		const [, content] = data.split('[net.minecraft.server.dedicated.DedicatedServer/]: ');
-    
-		this.bot.createMessage(process.env.DISCORD_CHANNEL, {
-			content,
-			allowedMentions: {
-				users: false,
-				roles: false,
-				everyone: false,
-			},
-		});
+		const message = /INFO\].*: <.{3,16}> .*/g;
+		const joined = /INFO\].*: .{3,16}\[.*\] logged in/g;
+		const left = /INFO\].*: .{3,16} lost connection/g;
+
+		if (data.match(started)?.length) {
+			console.log('Server has started.');
+			if (!this.rcon.authenticated)
+				setTimeout(() => {
+					this.rcon.connect();
+				}, 2000);
+			return this.bot.createMessage(process.env.DISCORD_CHANNEL, '✅ Server has started.').catch(console.error);
+		}
+		if (data.match(stopping)?.length) return this.bot.createMessage(process.env.DISCORD_CHANNEL, '🛑 Server is stopping.');
+
+		if (data.match(message)?.length) {
+			const [username] = data.match(/<.{3,16}>/);
+			const [, content] = data.split(username);
+
+			return this.bot.createMessage(process.env.DISCORD_CHANNEL, {
+				content: username + content.replace('\u001b[m',''), // Spigot nonsense
+				allowedMentions: {
+					users: false,
+					roles: false,
+					everyone: false,
+				},
+			});
+		}
+
+		if (data.match(joined)?.length) {
+			const [username] = data.match(/.{3,16}\[\//);
+			return this.bot.createMessage(process.env.DISCORD_CHANNEL, {
+				content: `${username.replace(/\[\//g, '')} joined the game`,
+				allowedMentions: {
+					users: false,
+					roles: false,
+					everyone: false,
+				},
+			});
+		}
+
+		if (data.match(left)?.length) {
+			const [username] = data.match(/.{3,16} lost/);
+			return this.bot.createMessage(process.env.DISCORD_CHANNEL, {
+				content: `${username.replace(' lost', '')} left the game`,
+				allowedMentions: {
+					users: false,
+					roles: false,
+					everyone: false,
+				},
+			});
+		}
 	}
 }
 
